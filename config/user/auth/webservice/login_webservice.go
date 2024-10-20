@@ -44,6 +44,16 @@ func (us authWebService) Setup(r *mux.Router) *mux.Router {
 			Methods: []string{http.MethodPost},
 			Handler: us.login,
 		},
+		{
+			Url:     "/logout",
+			Methods: []string{http.MethodPost},
+			Handler: us.logout,
+		},
+		{
+			Url:     "/user",
+			Methods: []string{http.MethodGet},
+			Handler: us.user,
+		},
 	}
 
 	for _, h := range handlers {
@@ -126,5 +136,68 @@ func (us authWebService) login(w http.ResponseWriter, r *http.Request) {
 
 	http.SetCookie(w, &cookie)
 	w.WriteHeader(http.StatusOK)
-	_, err = w.Write([]byte("Login successful"))
+	_, _ = w.Write([]byte("Login successful"))
+}
+
+func (us authWebService) logout(w http.ResponseWriter, r *http.Request) {
+	cookie := http.Cookie{
+		Name:     entities2.CookieName,
+		Value:    "",
+		Expires:  time.Now().Add(-time.Hour),
+		HttpOnly: true,
+		Secure:   true,
+		Domain:   "localhost",
+	}
+
+	http.SetCookie(w, &cookie)
+	http.Redirect(w, r, "/app/login", http.StatusFound)
+}
+
+func (us authWebService) user(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie(entities2.CookieName)
+
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		_, _ = w.Write([]byte("Invalid cookie"))
+		return
+	}
+	token, err := jwt.Parse(cookie.Value, func(token *jwt.Token) (interface{}, error) {
+		return []byte(entities2.SecretKey), nil
+	})
+
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		_, _ = w.Write([]byte("Invalid token"))
+		return
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+
+	if !ok {
+		w.WriteHeader(http.StatusUnauthorized)
+		_, _ = w.Write([]byte("Invalid token"))
+		return
+	}
+
+	userUUID, _ := claims["sub"].(string)
+
+	user, err := us.usecase.GetUserByUUID(userUUID)
+
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		_, _ = w.Write([]byte("No user found"))
+		return
+	}
+
+	response, err := json.Marshal(user)
+
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = w.Write([]byte("Erro on marshalling response"))
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(response)
 }

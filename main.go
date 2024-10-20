@@ -2,6 +2,7 @@ package main
 
 import (
 	"AwTV/config/database"
+	"AwTV/config/user/auth/service"
 	webservice3 "AwTV/config/user/auth/webservice"
 	webservice2 "AwTV/config/user/infra/webservice"
 	"AwTV/modules/device/infra/webservice"
@@ -23,6 +24,8 @@ func main() {
 	}
 
 	r := mux.NewRouter()
+
+	r.Use(service.AuthorizationMiddleware)
 
 	authWS := webservice3.NewAuthWebService(dbconn)
 	authWS.Setup(r)

@@ -42,11 +42,6 @@ func (us UserWebService) Setup(r *mux.Router) *mux.Router {
 			Handler: us.getUserByUUID,
 		},
 		{
-			Url:     "/getByNickname/{nickname}",
-			Methods: []string{http.MethodGet},
-			Handler: us.getByNickname,
-		},
-		{
 			Url:     "/register",
 			Methods: []string{http.MethodPost},
 			Handler: us.registerUser,
@@ -71,38 +66,6 @@ func (us UserWebService) getUserByUUID(w http.ResponseWriter, r *http.Request) {
 	uuid := vars["uuid"]
 
 	user, err := us.usecase.GetUserByUUID(uuid)
-
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		_, err := w.Write([]byte(err.Error()))
-		if err != nil {
-			return
-		}
-		return
-	}
-
-	response, err := json.Marshal(user)
-
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		_, err := w.Write([]byte(err.Error()))
-		if err != nil {
-			return
-		}
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write(response)
-}
-
-func (us UserWebService) getByNickname(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-
-	nickname := vars["nickname"]
-
-	user, err := us.usecase.GetUserByNickname(nickname)
 
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
